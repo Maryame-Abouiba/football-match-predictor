@@ -1,98 +1,92 @@
 # ⚽ Football Match Predictor
 
-Projet de machine learning qui prédit l'issue d'un match de football (victoire domicile / nul / victoire extérieur) à partir de statistiques historiques.
+Prédiction de l'issue d'un match de football entre deux équipes nationales, avec deux approches comparées dans un même notebook :
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+1. **Un modèle de Markov caché (HMM)** basé sur l'enchaînement des résultats passés de chaque équipe
+2. **Des modèles de machine learning** basés sur le classement FIFA
 
-## 📌 Aperçu
+L'exemple traité est **Maroc (domicile) vs Écosse (extérieur)**.
 
-L'objectif est de construire un modèle capable d'estimer le résultat d'un match à partir de données comme la forme récente des équipes, les confrontations directes, les buts marqués/encaissés et l'avantage du terrain.
-
-- **Entrée** : deux équipes, une date, un championnat
-- **Sortie** : probabilités de victoire / nul / défaite
-- **Modèles testés** : `[Régression logistique, Random Forest, XGBoost, ...]`
-
-## 🗂️ Structure du projet
+## 🗂️ Contenu du dépôt
 
 ```
 football-match-predictor/
-├── data/            # jeux de données bruts et nettoyés
-├── notebooks/       # exploration et expérimentations
-├── src/             # code source (préparation, features, entraînement)
-├── models/          # modèles entraînés sauvegardés
-├── requirements.txt
-└── README.md
-```
-
-> Adaptez cette arborescence à celle du dépôt réel.
-
-## 🚀 Installation
-
-```bash
-git clone https://github.com/Maryame-Abouiba/football-match-predictor.git
-cd football-match-predictor
-
-python -m venv venv
-source venv/bin/activate        # Windows : venv\Scripts\activate
-
-pip install -r requirements.txt
-```
-
-## ▶️ Utilisation
-
-```bash
-# Entraîner le modèle
-python src/train.py
-
-# Prédire un match
-python src/predict.py --home "Équipe A" --away "Équipe B"
+├── footballpredictor.ipynb   # notebook complet (données, HMM, machine learning)
+├── README.md
+└── .gitignore
 ```
 
 ## 📊 Données
 
-- **Source** : `[Kaggle / football-data.co.uk / API-Football ...]`
-- **Période** : `[ex. saisons 2015–2024]`
-- **Variables principales** : forme récente, buts marqués/encaissés, historique des confrontations, domicile/extérieur
+Les fichiers CSV ne sont pas inclus dans le dépôt. À télécharger puis à placer en local (adapter les chemins dans le notebook) :
 
-## 🧠 Méthodologie
+| Fichier | Utilisation |
+|---|---|
+| `results.csv` | Résultats de matchs internationaux depuis 1872 (filtrés depuis 2000) : approche HMM |
+| `international_matches.csv` | Matchs internationaux avec le classement FIFA des deux équipes : approche ML |
+| `fifa_ranking-2023-07-20.csv` | Classement FIFA au 20/07/2023 : prédiction du match |
 
-1. Nettoyage et préparation des données
-2. Création de features (moyennes glissantes, différence de forme, etc.)
-3. Séparation train/test chronologique (pour éviter la fuite de données)
-4. Entraînement et comparaison des modèles
-5. Évaluation et sélection du meilleur modèle
+## 🧠 Approche 1 : modèle de Markov caché
 
-## 📈 Résultats
+- **États** : `W` (victoire), `L` (défaite), `T` (nul)
+- **Observation** : `H` (domicile) ou `A` (extérieur)
+- Calcul pour chaque équipe des probabilités initiales, de la matrice de transition (résultat → résultat suivant) et de la matrice d'observation (résultat → domicile/extérieur)
+- Prédiction avec `hmmlearn` (`CategoricalHMM`), puis combinaison des deux équipes :
 
-| Modèle | Accuracy | F1-score |
-|--------|----------|----------|
-| Régression logistique | `XX %` | `XX` |
-| Random Forest | `XX %` | `XX` |
-| XGBoost | `XX %` | `XX` |
+| Issue | Probabilité |
+|---|---|
+| Victoire du Maroc | **0.56** |
+| Victoire de l'Écosse | 0.24 |
+| Match nul | 0.20 |
 
-> Le football reste un sport très aléatoire : les prédictions sont des probabilités, pas des certitudes.
+## 🤖 Approche 2 : machine learning
+
+**Variables** : `average_rank`, `rank_difference`, `point_difference`, `is_stake` (match officiel ou amical), `is_worldcup`.
+**Cible** : `is_won` (victoire de l'équipe à domicile ; le nul est compté comme non-victoire).
+**Séparation** : 80 % entraînement / 20 % test.
+
+| Modèle | Accuracy |
+|---|---|
+| **Régression logistique** | **68.38 %** |
+| Naive Bayes | 68.36 % |
+| SVM | 68.17 % |
+| Random Forest | 63.70 % |
+| KNN | 62.88 % |
+| Arbre de décision | 59.10 % |
+
+La régression logistique est retenue. Avec une marge de 0.05 autour de 50 %, elle donne pour Maroc vs Écosse une probabilité de victoire du Maroc de **0.53**, soit un **match nul** (le Maroc est 14e, l'Écosse 30e au classement du 20/07/2023).
+
+## 🚀 Installation et utilisation
+
+```bash
+git clone https://github.com/Maryame-Abouiba/football-match-predictor.git
+cd football-match-predictor
+pip install numpy pandas scikit-learn hmmlearn jupyter
+jupyter notebook footballpredictor.ipynb
+```
+
+Pour prédire un autre match, changez les noms des équipes (`'Morocco'`, `'Scotland'`) dans le notebook.
 
 ## 🛠️ Technologies
 
-- Python, Pandas, NumPy
-- Scikit-learn, XGBoost
-- Matplotlib / Seaborn
-- Jupyter Notebook
+Python · Pandas · NumPy · scikit-learn · hmmlearn · Jupyter Notebook
 
-## 🔮 Améliorations possibles
+## ⚠️ Limites
 
-- Intégrer les cotes des bookmakers et les statistiques xG
-- Prendre en compte les blessures et les compositions
-- Déployer une interface web (Streamlit / Flask)
+- L'approche HMM ne tient compte que de la séquence de résultats et du lieu, pas de la force de l'adversaire.
+- L'approche ML ne distingue pas le nul de la défaite et se limite à quelques variables issues du classement FIFA.
+- Le football est très aléatoire : les sorties sont des probabilités, pas des certitudes.
 
-## 🤝 Contribution
+## 🔮 Pistes d'amélioration
 
-Les contributions sont les bienvenues : ouvrez une issue ou proposez une pull request.
+- Prédire les trois classes (victoire / nul / défaite) plutôt qu'un résultat binaire
+- Ajouter la forme récente, le type de compétition et le terrain neutre
+- Combiner les meilleurs modèles (ensemble) et valider avec un découpage chronologique
+- Construire une interface (Streamlit) pour choisir deux équipes
 
-## 📄 Licence
+## 👤 Auteure
 
-Distribué sous licence MIT. Voir le fichier `LICENSE`.
+**Maryame Abouiba** — [GitHub](https://github.com/Maryame-Abouiba)
 
 ## 👤 Auteure
 
